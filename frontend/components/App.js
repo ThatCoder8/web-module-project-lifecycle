@@ -1,5 +1,7 @@
 import React from 'react'
 import axios from 'axios'
+import Form from './Form'
+import TodoList from './TodoList'
 
 const URL = 'http://localhost:9000/api/todos'
 
@@ -8,21 +10,25 @@ export default class App extends React.Component {
     todos: [], 
     error: '',
     todoNameInput: '',
+    displayCompleteds: true,
   }
   onTodoNameInputChange = evt => {
     const {value} = evt.target
    this.setState({...this.state, todoNameInput: value})
   }
+  resetForm = () => {this.setState({...this.state, todoNameInput: ''})}
+  setAxiosResponseError = err => this.setState({...this.state, error: err.response.data.message})
+
   postNewtodo = () => {
     axios.post(URL, {name: this.state.todoNameInput})
     .then(res => {
-      this.fetchAllToDos()
-      this.setState({...this.state, todoNameInput: ''})
+      this.setState({...this.state, quotes: this.state.quotes.concat(res.data.data)})
+      this.resetForm()
     })
-    .catch(err => {
-      this.setState({...this.state, error: err.response.data.message})
-    })
+    .catch(
+      this.setAxiosResponseError)
   }
+
   onTodoFormSubmit = evt => {
     evt.preventDefault()
     this.postNewtodo()
@@ -32,28 +38,41 @@ export default class App extends React.Component {
     .then(res => {
       this.setState({...this.state, todos: res.data.data})
     })
-    .catch(err => {
-      this.setState({...this.state, error: err.response.data.message})
-    })
+    .catch(
+      this.setAxiosResponseError)
   }
-  componenentDidMount() {
+  toggleCompleted = id => () => {
+    axios.patch(`${URL}/${id}`)
+.then(res => {
+ this.setState({...this.state, todos: this.state.todos.map(td => {
+  if (td.id !== id) return td
+  return res.data.data 
+ })})
+})
+.catch(this.setAxiosResponseError)
+  }
+  toggleDisplayCompleteds = () => {
+    this.setState({...this.state, displayCompleteds: false})
+  }
+  componentDidMount() {
     this.fetchAllToDos()
   }
   render() {
     return (
     <div>
     <div id="error">Error: {this.state.error}</div>
-    <div id="todos">
-      <h2>Todos:</h2>
-      {this.state.todos.map(td => {
-        return <div key={td.id}>{td.name}</div>
-      })}
-    </div>
-    <form id="todoform" onSubmit={this.}>
-      <input value={this.state.todoNameInput} onChange={this.state.onTodoNameInputChange} type="text" placeholder='Type todo'></input>
-      <input type="submit"></input>
-      <button>Clear Completed</button>
-    </form>
+    <TodoList
+     todos={this.state.todos}
+     displayCompleteds={this.state.displayCompleteds}
+     toggleCompleted={this.toggleCompleted}
+    />
+    <Form
+    onTodoFormSubmit={this.onTodoFormSubmit}
+    todoNameInput={this.state.todoNameInput}
+    onTodoNameInputChange={this.onTodoNameInputChange}
+    toggleDisplayCompleteds={this.toggleDisplayCompleteds}
+    displayCompleteds={this.state.displayCompleteds}
+    />
     </div> 
     )
   }
